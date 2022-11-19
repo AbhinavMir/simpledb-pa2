@@ -10,11 +10,11 @@ public class Insert extends Operator {
 
     private static final long serialVersionUID = 1L;
 
-    private TransactionId transactionId;
-    private DbIterator iter;
-    private int tableId;
-    private boolean inserted;
-    private TupleDesc resultTupleDesc;
+    TransactionId transactionId;
+    DbIterator iter;
+    int tableId;
+    boolean inserted;
+    TupleDesc resultTupleDesc;
     
     /**
      * Constructor.
