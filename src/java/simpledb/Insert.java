@@ -93,7 +93,11 @@ public class Insert extends Operator {
         BufferPool bp = Database.getBufferPool();
         int count = 0;
         while(child.hasNext()) {
-            bp.insertTuple(t, tableId, child.next());
+            try {
+                bp.insertTuple(t, tableId, child.next());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             count++;
         }
         Tuple retTuple = new Tuple(getTupleDesc());
