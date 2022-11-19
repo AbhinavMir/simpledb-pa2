@@ -11,7 +11,7 @@ public class Insert extends Operator {
     private static final long serialVersionUID = 1L;
 
     private TransactionId transactionId;
-    private DbIterator it;
+    private DbIterator iter;
     private int tableId;
     private boolean inserted;
     private TupleDesc resultTupleDesc;
@@ -33,7 +33,7 @@ public class Insert extends Operator {
             throws DbException {
         // some code goes here
     	transactionId = t;
-    	it = child;
+    	iter = child;
     	tableId = tableid;
     	inserted = false;
     	
@@ -51,28 +51,28 @@ public class Insert extends Operator {
     public void open() throws DbException, TransactionAbortedException {
         // some code goes here
     	super.open();
-    	it.open();
+    	iter.open();
     	inserted = false;
     }
 
     public void close() {
         // some code goes here
     	super.close();
-    	it.close();
+    	iter.close();
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
         // some code goes here
-    	it.rewind();
+    	iter.rewind();
     }
 
     /**
      * Inserts tuples read from child into the tableid specified by the
-     * constructor. It returns a one field tuple containing the number of
+     * constructor. iter returns a one field tuple containing the number of
      * inserted records. Inserts should be passed through BufferPool. An
      * instances of BufferPool is available via Database.getBufferPool(). Note
      * that insert DOES NOT need check to see if a particular tuple is a
-     * duplicate before inserting it.
+     * duplicate before inserting iter.
      * 
      * @return A 1-field tuple containing the number of inserted records, or
      *         null if called more than once.
@@ -83,9 +83,9 @@ public class Insert extends Operator {
         // some code goes here
     	if (inserted) return null;
     	int insertedCount = 0;
-    	while (it.hasNext())
+    	while (iter.hasNext())
     	{
-    		Tuple tup = it.next();
+    		Tuple tup = iter.next();
     		try 
     		{
         		Database.getBufferPool().insertTuple(transactionId, tableId, tup);    			
@@ -105,11 +105,11 @@ public class Insert extends Operator {
     @Override
     public DbIterator[] getChildren() {
         // some code goes here
-        return new DbIterator[] {it};
+        return new DbIterator[] {iter};
     }
 
     @Override
     public void setChildren(DbIterator[] children) {
-        it = children[0];
+        iter = children[0];
     }
 }
