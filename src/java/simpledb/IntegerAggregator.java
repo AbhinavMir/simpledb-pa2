@@ -11,12 +11,13 @@ import java.util.NoSuchElementException;
 public class IntegerAggregator implements Aggregator {
 
     private static final long serialVersionUID = 1L;
-    int gbfield;
-    Type gbfieldtype;
-    int afield;
-    Op what;
-    HashMap<Field, Integer> groupAgg;
-    HashMap<Field, Integer> groupCount;
+    
+    int grpFieldByIndex;
+    Type grpFieldType;
+    int aggFieldByIndex;
+    Op aggOp;
+    Map<Field, Integer> aggMap;
+    Map<Field, Integer> countMap;
 
     /**
      * Aggregate constructor
@@ -34,11 +35,13 @@ public class IntegerAggregator implements Aggregator {
      */
     public IntegerAggregator(int gbfield, Type gbfieldtype, int afield, Op what) {
         // some code goes here
-        this.gbfield = gbfield;
-        this.gbfieldtype = gbfieldtype;
-        this.afield = afield;
-        this.what = what;
-        this.groupAgg = new HashMap<Field, Integer>();
+        this.grpFieldByIndex = gbfield;
+        this.grpFieldType = gbfieldtype;
+        this.aggFieldByIndex = afield;
+        this.aggOp = what;
+        this.aggMap = new HashMap<Field, Integer>();
+        this.countMap = new HashMap<Field, Integer>();
+
     }
 
     /**
@@ -49,36 +52,31 @@ public class IntegerAggregator implements Aggregator {
      *            the Tuple containing an aggregate field and a group-by field
      */
     public void mergeTupleIntoGroup(Tuple tup) {
-        Field group = gbfield != NO_GROUPING ? tup.getField(gbfield) : new IntField(NO_GROUPING);
-        int val = ((IntField) tup.getField(afield)).getValue();
-
-        if (groupAgg.containsKey(group)) {
-            int agg = groupAgg.get(group);
-            int count = groupCount.get(group);
-            switch (what) {
+        // some code goes here
+        Field grpField = grpFieldByIndex == Aggregator.NO_GROUPING ? null : tup.getField(grpFieldByIndex);
+        int aggField = ((IntField) tup.getField(aggFieldByIndex)).getValue();
+        int count = countMap.getOrDefault(grpField, 0);
+        int agg = aggMap.getOrDefault(grpField, 0);
+        switch (aggOp) {
             case MIN:
-                agg = Math.min(agg, val);
+                agg = count == 0 ? aggField : Math.min(agg, aggField);
                 break;
             case MAX:
-                agg = Math.max(agg, val);
+                agg = count == 0 ? aggField : Math.max(agg, aggField);
                 break;
             case SUM:
-                agg += val;
-                break;
             case AVG:
-                agg += val;
-                count++;
+                agg += aggField;
                 break;
             case COUNT:
-                count++;
+                agg = count + 1;
                 break;
-            }
-            groupAgg.put(group, agg);
-            groupCount.put(group, count);
-        } else {
-            groupAgg.put(group, val);
-            groupCount.put(group, 1);
+            case SC_AVG:
+                agg += aggField;
+                break;
         }
+        aggMap.put(grpField, agg);
+        countMap.put(grpField, count + 1);
     }
 
     /**
@@ -104,7 +102,7 @@ public class IntegerAggregator implements Aggregator {
         public IntegerAggregatorIterator(IntegerAggregator agg) {
             this.agg = agg;
             this.td = td;
-            this.iter = agg.groupAgg.entrySet().iterator();
+            this.iter = agg.aggMap.entrySet().iterator();
         }
 
         public IntegerAggregator getAgg() {
@@ -114,7 +112,7 @@ public class IntegerAggregator implements Aggregator {
 
         @Override
         public void open() throws DbException, TransactionAbortedException {
-            iter = agg.groupAgg.entrySet().iterator();
+            iter = agg.aggMap.entrySet().iterator();
         }
 
         @Override
@@ -129,7 +127,7 @@ public class IntegerAggregator implements Aggregator {
 
         @Override
         public void rewind() throws DbException, TransactionAbortedException {
-            iter = agg.groupAgg.entrySet().iterator();
+            iter = agg.aggMap.entrySet().iterator();
         }
 
         @Override

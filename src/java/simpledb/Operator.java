@@ -56,7 +56,7 @@ public abstract class Operator implements DbIterator {
     }
 
     private Tuple next = null;
-    private boolean open = false;
+    private boolean open = true;
     private int estimatedCardinality = 0;
 
     public void open() throws DbException, TransactionAbortedException {
