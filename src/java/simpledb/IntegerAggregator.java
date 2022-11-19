@@ -10,12 +10,12 @@ public class IntegerAggregator implements Aggregator {
 
     private static final long serialVersionUID = 1L;
 
-    private int m_groupByFieldIndex;
-    private Type m_groupByFieldType;
-    private int m_aggregateFieldIndex;
-    private Op m_op;
-    private HashMap<Field,Integer> m_aggregateData;
-    private HashMap<Field,Integer> m_count;
+    private int gfi;
+    private Type gfiType;
+    private int aggregateFieldIndex;
+    private Op op;
+    private HashMap<Field,Integer> aggregateData;
+    private HashMap<Field,Integer> count;
     
     
     /**
@@ -35,17 +35,17 @@ public class IntegerAggregator implements Aggregator {
 
     public IntegerAggregator(int gbfield, Type gbfieldtype, int afield, Op what) {
         // some code goes here
-    	m_groupByFieldIndex = gbfield;
-    	m_groupByFieldType = gbfieldtype;
-    	m_aggregateFieldIndex = afield;
-    	m_op = what;
-    	m_aggregateData = new HashMap<Field, Integer>();
-    	m_count = new HashMap<Field, Integer>();
+    	gfi = gbfield;
+    	gfiType = gbfieldtype;
+    	aggregateFieldIndex = afield;
+    	op = what;
+    	aggregateData = new HashMap<Field, Integer>();
+    	count = new HashMap<Field, Integer>();
     }
 
     private int initialData()
     {
-    	switch(m_op)
+    	switch(op)
     	{
 	    	case MIN: return Integer.MAX_VALUE;
 	    	case MAX: return Integer.MIN_VALUE;
@@ -63,19 +63,19 @@ public class IntegerAggregator implements Aggregator {
      */
     public void mergeTupleIntoGroup(Tuple tup) {
         // some code goes here
-    	Field tupleGroupByField = (m_groupByFieldIndex == Aggregator.NO_GROUPING) ? null : tup.getField(m_groupByFieldIndex);
+    	Field tupleGroupByField = (gfi == Aggregator.NO_GROUPING) ? null : tup.getField(gfi);
     	
-    	if (!m_aggregateData.containsKey(tupleGroupByField))
+    	if (!aggregateData.containsKey(tupleGroupByField))
     	{
-    		m_aggregateData.put(tupleGroupByField, initialData());
-    		m_count.put(tupleGroupByField, 0);
+    		aggregateData.put(tupleGroupByField, initialData());
+    		count.put(tupleGroupByField, 0);
     	}
     	
-    	int tupleValue = ((IntField) tup.getField(m_aggregateFieldIndex)).getValue();
-    	int currentValue = m_aggregateData.get(tupleGroupByField);
-    	int currentCount = m_count.get(tupleGroupByField);
+    	int tupleValue = ((IntField) tup.getField(aggregateFieldIndex)).getValue();
+    	int currentValue = aggregateData.get(tupleGroupByField);
+    	int currentCount = count.get(tupleGroupByField);
     	int newValue = currentValue;
-    	switch(m_op)
+    	switch(op)
     	{
     		case MIN: 
     			newValue = (tupleValue > currentValue) ? currentValue : tupleValue;
@@ -87,7 +87,7 @@ public class IntegerAggregator implements Aggregator {
     			// can't calculate average until all the tuples are in
     			// In the mean time, keep track of sum and count and 
     			// calculate the averages in the iterator
-    			m_count.put(tupleGroupByField, currentCount+1);
+    			count.put(tupleGroupByField, currentCount+1);
     			newValue = tupleValue + currentValue;
     			break;
     		case COUNT:
@@ -96,14 +96,14 @@ public class IntegerAggregator implements Aggregator {
 			default:
 				break;
     	}
-    	m_aggregateData.put(tupleGroupByField, newValue);
+    	aggregateData.put(tupleGroupByField, newValue);
     }
 
     private TupleDesc createGroupByTupleDesc()
     {
     	String[] names;
     	Type[] types;
-    	if (m_groupByFieldIndex == Aggregator.NO_GROUPING)
+    	if (gfi == Aggregator.NO_GROUPING)
     	{
     		names = new String[] {"aggregateValue"};
     		types = new Type[] {Type.INT_TYPE};
@@ -111,7 +111,7 @@ public class IntegerAggregator implements Aggregator {
     	else
     	{
     		names = new String[] {"groupValue", "aggregateValue"};
-    		types = new Type[] {m_groupByFieldType, Type.INT_TYPE};
+    		types = new Type[] {gfiType, Type.INT_TYPE};
     	}
     	return new TupleDesc(types, names);
     }
@@ -129,19 +129,19 @@ public class IntegerAggregator implements Aggregator {
     	ArrayList<Tuple> tuples = new ArrayList<Tuple>();
     	TupleDesc tupledesc = createGroupByTupleDesc();
     	Tuple addMe;
-    	for (Field group : m_aggregateData.keySet())
+    	for (Field group : aggregateData.keySet())
     	{
     		int aggregateVal;
-    		if (m_op == Op.AVG)
+    		if (op == Op.AVG)
     		{
-    			aggregateVal = m_aggregateData.get(group) / m_count.get(group);
+    			aggregateVal = aggregateData.get(group) / count.get(group);
     		}
     		else
     		{
-    			aggregateVal = m_aggregateData.get(group);
+    			aggregateVal = aggregateData.get(group);
     		}
     		addMe = new Tuple(tupledesc);
-    		if (m_groupByFieldIndex == Aggregator.NO_GROUPING){
+    		if (gfi == Aggregator.NO_GROUPING){
     			addMe.setField(0, new IntField(aggregateVal));
     		}
     		else {

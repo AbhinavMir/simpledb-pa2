@@ -15,8 +15,8 @@ public class StringAggregator implements Aggregator {
     private int gfi;
     private Type gfiType;
     private int afi;
-    private Op m_op;
-    private HashMap<Field,Integer> m_count;
+    private Op op;
+    private HashMap<Field,Integer> count;
 
     /**
      * Aggregate constructor
@@ -32,9 +32,9 @@ public class StringAggregator implements Aggregator {
     	gfi = gbfield;
     	gfiType = gbfieldtype;
     	afi = afield;
-    	m_op = what;
-    	assert(m_op == Op.COUNT);
-    	m_count = new HashMap<Field, Integer>();
+    	op = what;
+    	assert(op == Op.COUNT);
+    	count = new HashMap<Field, Integer>();
     }
 
     /**
@@ -45,13 +45,13 @@ public class StringAggregator implements Aggregator {
         // some code goes here
     	Field tupleGroupByField = (gfi == Aggregator.NO_GROUPING) ? null : tup.getField(gfi);
     	
-    	if (!m_count.containsKey(tupleGroupByField))
+    	if (!count.containsKey(tupleGroupByField))
     	{
-    		m_count.put(tupleGroupByField, 0);
+    		count.put(tupleGroupByField, 0);
     	}
     	
-    	int currentCount = m_count.get(tupleGroupByField);
-    	m_count.put(tupleGroupByField, currentCount+1);
+    	int currentCount = count.get(tupleGroupByField);
+    	count.put(tupleGroupByField, currentCount+1);
 
     }
     
@@ -84,9 +84,9 @@ public class StringAggregator implements Aggregator {
     	ArrayList<Tuple> tuples = new ArrayList<Tuple>();
     	TupleDesc tupledesc = createGroupByTupleDesc();
     	Tuple addMe;
-    	for (Field group : m_count.keySet())
+    	for (Field group : count.keySet())
     	{
-    		int aggregateVal = m_count.get(group);
+    		int aggregateVal = count.get(group);
     		addMe = new Tuple(tupledesc);
     		if (gfi == Aggregator.NO_GROUPING){
     			addMe.setField(0, new IntField(aggregateVal));
