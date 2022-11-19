@@ -3,103 +3,113 @@ package simpledb;
 import java.io.IOException;
 
 /**
- * Inserts tuples read from the child operator into the tableId specified in the
+ * Inserts tuples read from the child operator into the tableid specified in the
  * constructor
  */
 public class Insert extends Operator {
 
     private static final long serialVersionUID = 1L;
 
+    private TransactionId m_transactionId;
+    private DbIterator m_it;
+    private int m_tableId;
+    private boolean m_inserted;
+    private TupleDesc m_resultTupleDesc;
+    
     /**
      * Constructor.
-     *
+     * 
      * @param t
      *            The transaction running the insert.
      * @param child
      *            The child operator from which to read tuples to be inserted.
-     * @param tableId
+     * @param tableid
      *            The table in which to insert tuples.
      * @throws DbException
      *             if TupleDesc of child differs from table into which we are to
      *             insert.
      */
-
-    TransactionId t;
-    DbIterator child;
-    int tableId;
-    boolean nextOne;
-
-    public Insert(TransactionId t,DbIterator child, int tableId)
+    public Insert(TransactionId t,DbIterator child, int tableid)
             throws DbException {
-        this.t = t;
-        this.child = child;
-        this.tableId = tableId;
-        this.nextOne = false;
+        // some code goes here
+    	m_transactionId = t;
+    	m_it = child;
+    	m_tableId = tableid;
+    	m_inserted = false;
+    	
+    	String[] names = new String[] {"Inserted"};
+    	Type[] types = new Type[] {Type.INT_TYPE};
+    	m_resultTupleDesc = new TupleDesc(types, names);
+
     }
 
     public TupleDesc getTupleDesc() {
         // some code goes here
-        return null;
+        return m_resultTupleDesc;
     }
 
     public void open() throws DbException, TransactionAbortedException {
-        super.open();
-        child.open();
+        // some code goes here
+    	super.open();
+    	m_it.open();
+    	m_inserted = false;
     }
 
     public void close() {
-        super.close();
-        child.close();
+        // some code goes here
+    	super.close();
+    	m_it.close();
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
-        child.rewind();
-        nextOne = false;
+        // some code goes here
+    	m_it.rewind();
     }
 
     /**
-     * Inserts tuples read from child into the tableId specified by the
+     * Inserts tuples read from child into the tableid specified by the
      * constructor. It returns a one field tuple containing the number of
      * inserted records. Inserts should be passed through BufferPool. An
      * instances of BufferPool is available via Database.getBufferPool(). Note
      * that insert DOES NOT need check to see if a particular tuple is a
      * duplicate before inserting it.
-     *
+     * 
      * @return A 1-field tuple containing the number of inserted records, or
      *         null if called more than once.
      * @see Database#getBufferPool
      * @see BufferPool#insertTuple
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
-       
-        if(nextOne)
-            return null;
-        nextOne = true;
-        BufferPool bp = Database.getBufferPool();
-        int count = 0;
-        while(child.hasNext()) {
-            try {
-                bp.insertTuple(t, tableId, child.next());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            count++;
-        }
-        Tuple retTuple = new Tuple(getTupleDesc());
-        retTuple.setField(0, new IntField(count));
-        return retTuple;
-    
-
+        // some code goes here
+    	if (m_inserted) return null;
+    	int insertedCount = 0;
+    	while (m_it.hasNext())
+    	{
+    		Tuple tup = m_it.next();
+    		try 
+    		{
+        		Database.getBufferPool().insertTuple(m_transactionId, m_tableId, tup);    			
+    		}
+    		catch (IOException e)
+    		{
+    			throw new DbException("IO Exception on tuple insertion");
+    		}
+    		insertedCount++;
+    	}
+    	Tuple resultTuple = new Tuple(m_resultTupleDesc);
+    	resultTuple.setField(0, new IntField(insertedCount));
+    	m_inserted = true;
+    	return resultTuple;
     }
 
     @Override
     public DbIterator[] getChildren() {
         // some code goes here
-        return null;
+        return new DbIterator[] {m_it};
     }
 
     @Override
     public void setChildren(DbIterator[] children) {
-        // some code goes here
+        m_it = children[0];
     }
 }
