@@ -81,7 +81,7 @@ public class Insert extends Operator {
             Tuple tup = child.next();
             try {
                 Database.getBufferPool().insertTuple(t, tableId, tup);
-            } catch (IOException e) {
+            } catch(IOException e) {
                 throw new DbException("IO Exception on tuple insertion");
             }
             insertedCount++;
