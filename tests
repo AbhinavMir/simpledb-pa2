@@ -1,1 +1,8 @@
-ant runtest -Dtest=*
+ant runtest -Dtest=PredicateTest
+ant runtest -Dtest=JoinPredicateTest
+ant runtest -Dtest=FilterTest
+ant runtest -Dtest=JoinTest
+ant runtest -Dtest=HashEquiJoinTest
+ant runtest -Dtest=IntegerAggregatorTest
+ant runtest -Dtest=StringAggregatorTest
+ant runtest -Dtest=AggregateTest
