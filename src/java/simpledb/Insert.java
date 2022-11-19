@@ -71,25 +71,36 @@ public class Insert extends Operator {
      * @see BufferPool#insertTuple
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
-        
-
-        if (nextOne) {
+        /*
+         * if(readNextCalled)
             return null;
+        readNextCalled = true;
+
+        BufferPool bp = Database.getBufferPool();
+        int insertCount = 0;
+        while(child.hasNext()) {
+            bp.insertTuple(tid, tableid, child.next());
+            insertCount++;
         }
-        int insertedCount = 0;
-        while (child.hasNext()) {
-            Tuple tup = child.next();
-            try {
-                Database.getBufferPool().insertTuple(t, tableId, tup);
-            } catch(IOException e) {
-                throw new DbException("IO Exception on tuple insertion");
-            }
-            insertedCount++;
-        }
-        Tuple resultTuple = new Tuple(getTupleDesc());
-        resultTuple.setField(0, new IntField(insertedCount));
+
+        Tuple retTuple = new Tuple(td);
+        retTuple.setField(0, new IntField(insertCount));
+        return retTuple;
+         */
+        if(nextOne)
+            return null;
         nextOne = true;
-        return resultTuple;
+        BufferPool bp = Database.getBufferPool();
+        int count = 0;
+        while(child.hasNext()) {
+            bp.insertTuple(t, tableId, child.next());
+            count++;
+        }
+        Tuple retTuple = new Tuple(getTupleDesc());
+        retTuple.setField(0, new IntField(count));
+        return retTuple;
+    
+
     }
 
     @Override
