@@ -18,6 +18,16 @@ The code above is responsible for creating a new HeapFile object. This object is
 
 `Insert.java` inserts tuples read from the child operator into the tableId specified in the constructor.
 
+## Aggregates
+    Aggregate was rather simple as it revolved mostly around handling the merging of tuples which is not overly hard just some case handling
+    depending on things such as grouping and the difference between strings and Integers when it comes to merging.
+
+## Hash Equi Join
+    This was a difficult part with the merge itself proving the hardest. I split up the loops of both children into different functions in fetchNext and loadHashMap and then
+    the handling of the merge itself into one tuple was split into parseList which is called in fetchNext to give the combined tuple when called. I was slightly worried about memory
+    because the datastructures holding the data ie the HashMap can get quite large and should be limited to only a subset as to not overload the main memory.  However the details of the
+    assignment did not mention the cases and the tests pass so I guess its fine.
+
 ## Time spent on assignment and the difficult parts
 
 Our main pain points were getting the IOExceptions giving us some problems w.r.t fetchNext() - spent a decent amount of time debugging that. 
