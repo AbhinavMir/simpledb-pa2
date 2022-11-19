@@ -10,11 +10,11 @@ public class Insert extends Operator {
 
     private static final long serialVersionUID = 1L;
 
-    private TransactionId m_transactionId;
-    private DbIterator m_it;
-    private int m_tableId;
-    private boolean m_inserted;
-    private TupleDesc m_resultTupleDesc;
+    private TransactionId transactionId;
+    private DbIterator it;
+    private int tableId;
+    private boolean inserted;
+    private TupleDesc resultTupleDesc;
     
     /**
      * Constructor.
@@ -32,38 +32,38 @@ public class Insert extends Operator {
     public Insert(TransactionId t,DbIterator child, int tableid)
             throws DbException {
         // some code goes here
-    	m_transactionId = t;
-    	m_it = child;
-    	m_tableId = tableid;
-    	m_inserted = false;
+    	transactionId = t;
+    	it = child;
+    	tableId = tableid;
+    	inserted = false;
     	
     	String[] names = new String[] {"Inserted"};
     	Type[] types = new Type[] {Type.INT_TYPE};
-    	m_resultTupleDesc = new TupleDesc(types, names);
+    	resultTupleDesc = new TupleDesc(types, names);
 
     }
 
     public TupleDesc getTupleDesc() {
         // some code goes here
-        return m_resultTupleDesc;
+        return resultTupleDesc;
     }
 
     public void open() throws DbException, TransactionAbortedException {
         // some code goes here
     	super.open();
-    	m_it.open();
-    	m_inserted = false;
+    	it.open();
+    	inserted = false;
     }
 
     public void close() {
         // some code goes here
     	super.close();
-    	m_it.close();
+    	it.close();
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
         // some code goes here
-    	m_it.rewind();
+    	it.rewind();
     }
 
     /**
@@ -81,14 +81,14 @@ public class Insert extends Operator {
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // some code goes here
-    	if (m_inserted) return null;
+    	if (inserted) return null;
     	int insertedCount = 0;
-    	while (m_it.hasNext())
+    	while (it.hasNext())
     	{
-    		Tuple tup = m_it.next();
+    		Tuple tup = it.next();
     		try 
     		{
-        		Database.getBufferPool().insertTuple(m_transactionId, m_tableId, tup);    			
+        		Database.getBufferPool().insertTuple(transactionId, tableId, tup);    			
     		}
     		catch (IOException e)
     		{
@@ -96,20 +96,20 @@ public class Insert extends Operator {
     		}
     		insertedCount++;
     	}
-    	Tuple resultTuple = new Tuple(m_resultTupleDesc);
+    	Tuple resultTuple = new Tuple(resultTupleDesc);
     	resultTuple.setField(0, new IntField(insertedCount));
-    	m_inserted = true;
+    	inserted = true;
     	return resultTuple;
     }
 
     @Override
     public DbIterator[] getChildren() {
         // some code goes here
-        return new DbIterator[] {m_it};
+        return new DbIterator[] {it};
     }
 
     @Override
     public void setChildren(DbIterator[] children) {
-        m_it = children[0];
+        it = children[0];
     }
 }
