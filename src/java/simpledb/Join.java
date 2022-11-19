@@ -97,6 +97,13 @@ public class Join extends Operator {
      * @see JoinPredicate#filter
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
+        // add exceptions
+        if (child1 == null || child2 == null) {
+            throw new DbException("child1 or child2 is null");
+        }
+        if (joinpred == null) {
+            throw new DbException("join predicate is null");
+        }
         if (tup == null) {
             if (child1.hasNext()) {
                 tup = child1.next();
