@@ -126,12 +126,9 @@ public class Aggregate extends Operator {
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
 
-        try{
-            boolean hasNext = aggIterator.hasNext();
-            if(hasNext)
-                return aggIterator.next();
-        }
-        catch(NoSuchElementException e) {return null;}
+        if(aggIterator.hasNext())
+            return aggIterator.next();
+        return null;
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
