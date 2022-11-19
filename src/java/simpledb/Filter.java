@@ -54,13 +54,14 @@ public class Filter extends Operator {
      * @see Predicate#filter
      */
     protected Tuple fetchNext() throws NoSuchElementException, TransactionAbortedException, DbException {
-        if (!child.hasNext()) return null;
-        Tuple currrentTuple = child.next();
-        while (!p.filter(currrentTuple)) {
-            if (!child.hasNext()) return null;
-            currrentTuple = child.next();
+    
+        while (child.hasNext()) {
+            Tuple currrentTuple = child.next();
+            if (p.filter(currrentTuple)) {
+                return currrentTuple;
+            }
         }
-        return currrentTuple;
+        return null;
     }
 
     @Override
