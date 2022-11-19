@@ -125,9 +125,13 @@ public class Aggregate extends Operator {
      * aggregate. Should return null if there are no more tuples.
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
-	    if(aggIterator.hasNext())
-            return aggIterator.next();
-        return null;
+
+        try{
+            boolean hasNext = aggIterator.hasNext();
+            if(hasNext)
+                return aggIterator.next();
+        }
+        catch(NoSuchElementException e) {return null;}
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
