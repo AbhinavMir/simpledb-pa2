@@ -71,7 +71,7 @@ public class Delete extends Operator {
             try {
                 Database.getBufferPool().deleteTuple(transactionId, tup);
             } catch (IOException e) {
-                throw new DbException("IO Exception on tuple deletion");
+                throw new DbException("IO tup del exp");
             }
             deletedCount++;
         }
