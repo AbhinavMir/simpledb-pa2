@@ -16,29 +16,15 @@ The code above is responsible for creating a new HeapFile object. This object is
 
 ### Insert And Delete
 
-
 `Insert.java` inserts tuples read from the child operator into the tableId specified in the constructor.
 
 ## Time spent on assignment and the difficult parts
 
-We spent about 3 days grokking the overall architecture and the requirements and reverse-engineering the tests. From there, it took us another 2 days to actually do some code writing, and another day to fix bugs and tie things up.
-
-
-The idea behind the extra credit was relatively simple the necessary steps to maintain the core structure of the B+ tree
-were maintained even as pages were merged, split, deleted what have you.  The pictures of what each function was supposed
-to do were very helpful and I initially tested the functions by simulating those pictures and trying to get the same results.
-
-
-I had to tweak the BufferPages insert and deletion function for tuples because they were initially built for Heap files and not
-B+tree entries.  Getting the right IDs for merging and splitting took some time until I figured out how to properly use
-both Iterator and Reverse Iterators to get the right IDs.
+Our main pain points were getting the IOExceptions giving us some problems w.r.t fetchNext() - spent a decent amount of time debugging that. 
 
 No real changes where made to the API.
 
 Collaborators
 Finn Jensen and Abhinav Srivastava
 
-Exercise 1 - Abhinav
-Exercise 2 - Abhinav and Finn
-Exercise 3 - Finn
-Exercise 4 (Bonus) - Abhinav and Finn
+We alternated between the exercises, and worked on query walkthrough together. We also worked on the writeup together and debugged this together.
