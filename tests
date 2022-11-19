@@ -6,3 +6,5 @@ ant runtest -Dtest=HashEquiJoinTest
 ant runtest -Dtest=IntegerAggregatorTest
 ant runtest -Dtest=StringAggregatorTest
 ant runtest -Dtest=AggregateTest
+ant runtest -Dtest=HeapFileWriteTest
+ant runtest -Dtest=HeapPageWriteTest

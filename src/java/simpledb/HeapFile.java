@@ -37,7 +37,7 @@ public class HeapFile implements DbFile {
      * @return the File backing this HeapFile on disk.
      */
     public File getFile() {
-        return f;
+        return this.f;
     }
 
     /**
@@ -64,60 +64,35 @@ public class HeapFile implements DbFile {
 
     // see DbFile.java for javadocs
     public Page readPage(PageId pid) {
-        HeapPageId id = (HeapPageId) pid;
-        BufferedInputStream bis = null;
-
         try {
-            bis = new BufferedInputStream(new FileInputStream(f));
-            byte[] pageBuf = new byte[BufferPool.getPageSize()];
-            if (bis.skip((long) id.pageNumber() * BufferPool.getPageSize()) != (long) id.pageNumber() * BufferPool.getPageSize()) {
-                throw new IllegalArgumentException("Unable to seek to correct place in heapfile");
+            RandomAccessFile f = new RandomAccessFile(this.f, "r");
+            int offset = BufferPool.getPageSize() * pid.pageNumber();
+            byte[] data = new byte[BufferPool.getPageSize()];
+            if (offset + BufferPool.getPageSize() > f.length()) {
+                System.err.println("Page offset exceeds max size, error!");
+                System.exit(1);
             }
-            int retval = bis.read(pageBuf, 0, BufferPool.getPageSize());
-            if (retval == -1) {
-                throw new IllegalArgumentException("Read past end of table");
-            }
-            if (retval < BufferPool.getPageSize()) {
-                throw new IllegalArgumentException("Unable to read " + BufferPool.getPageSize() + " bytes from heapfile");
-            }
-            Debug.log(1, "HeapFile.readPage: read page %d", id.pageNumber());
-            HeapPage p = new HeapPage(id, pageBuf);
-            return p;
+            f.seek(offset);
+            f.readFully(data);
+            f.close();
+            return new HeapPage((HeapPageId) pid, data);
+        } catch (FileNotFoundException e) {
+            System.err.println("FileNotFoundException: " + e.getMessage());
+            throw new IllegalArgumentException();
         } catch (IOException e) {
-            throw new RuntimeException(e);
-        } finally {
-            // Close the file on success or error
-            try {
-                if (bis != null) bis.close();
-            } catch (IOException ioe) {
-                // Ignore failures closing the file
-            }
+            System.err.println("Caught IOException: " + e.getMessage());
+            throw new IllegalArgumentException();
         }
     }
 
     // see DbFile.java for javadocs
     public void writePage(Page page) throws IOException {
-        HeapPageId id = (HeapPageId) page.getId();
-        RandomAccessFile raf = null;
 
-        try {
-            raf = new RandomAccessFile(f, "rw");
-            if (raf.length() < (long) (id.pageNumber() + 1) * BufferPool.getPageSize()) {
-                throw new IllegalArgumentException("Write past end of table");
-            }
-            raf.seek((long) id.pageNumber() * BufferPool.getPageSize());
-            raf.write(page.getPageData());
-            Debug.log(1, "HeapFile.writePage: wrote page %d", id.pageNumber());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } finally {
-            // Close the file on success or error
-            try {
-                if (raf != null) raf.close();
-            } catch (IOException ioe) {
-                // Ignore failures closing the file
-            }
-        }
+        RandomAccessFile f = new RandomAccessFile(this.f, "rw");
+        int offset = BufferPool.getPageSize() * page.getId().pageNumber();
+        f.seek(offset);
+        f.write(page.getPageData(), 0, BufferPool.getPageSize());
+        f.close();
     }
 
     /**
