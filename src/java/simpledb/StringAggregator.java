@@ -1,9 +1,9 @@
 package simpledb;
 
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.NoSuchElementException;
+
+import simpledb.Aggregator.Op;
 
 /**
  * Knows how to compute some aggregate over a set of StringFields.
@@ -11,6 +11,12 @@ import java.util.NoSuchElementException;
 public class StringAggregator implements Aggregator {
 
     private static final long serialVersionUID = 1L;
+
+    private int gfi;
+    private Type gfiType;
+    private int afi;
+    private Op m_op;
+    private HashMap<Field,Integer> m_count;
 
     /**
      * Aggregate constructor
@@ -21,20 +27,14 @@ public class StringAggregator implements Aggregator {
      * @throws IllegalArgumentException if what != COUNT
      */
 
-    int gbfield;
-    Type gbfieldtype;
-    int afield;
-    Op what;
-    HashMap<Field, Integer> groupValCount;
-
     public StringAggregator(int gbfield, Type gbfieldtype, int afield, Op what) {
-        if(what != Op.COUNT)
-            throw new IllegalArgumentException("Only COUNT is supported");
-        this.gbfield = gbfield;
-        this.gbfieldtype = gbfieldtype;
-        this.afield = afield;
-        this.what = what;
-        groupValCount = new HashMap<Field, Integer>();
+        // some code goes here
+    	gfi = gbfield;
+    	gfiType = gbfieldtype;
+    	afi = afield;
+    	m_op = what;
+    	assert(m_op == Op.COUNT);
+    	m_count = new HashMap<Field, Integer>();
     }
 
     /**
@@ -42,13 +42,35 @@ public class StringAggregator implements Aggregator {
      * @param tup the Tuple containing an aggregate field and a group-by field
      */
     public void mergeTupleIntoGroup(Tuple tup) {
-        Field groupField = gbfield == NO_GROUPING ? null : tup.getField(gbfield);
-        if(groupValCount.containsKey(groupField))
-            groupValCount.put(groupField, groupValCount.get(groupField) + 1);
-        else
-            groupValCount.put(groupField, 1);
-    }
+        // some code goes here
+    	Field tupleGroupByField = (gfi == Aggregator.NO_GROUPING) ? null : tup.getField(gfi);
+    	
+    	if (!m_count.containsKey(tupleGroupByField))
+    	{
+    		m_count.put(tupleGroupByField, 0);
+    	}
+    	
+    	int currentCount = m_count.get(tupleGroupByField);
+    	m_count.put(tupleGroupByField, currentCount+1);
 
+    }
+    
+    private TupleDesc createGroupByTupleDesc()
+    {
+    	String[] names;
+    	Type[] types;
+    	if (gfi == Aggregator.NO_GROUPING)
+    	{
+    		names = new String[] {"aggregateValue"};
+    		types = new Type[] {Type.INT_TYPE};
+    	}
+    	else
+    	{
+    		names = new String[] {"groupValue", "aggregateValue"};
+    		types = new Type[] {gfiType, Type.INT_TYPE};
+    	}
+    	return new TupleDesc(types, names);
+    }
     /**
      * Create a DbIterator over group aggregate results.
      *
@@ -58,51 +80,24 @@ public class StringAggregator implements Aggregator {
      *   aggregate specified in the constructor.
      */
     public DbIterator iterator() {
-        return new StringAggIterator(this);
-    }
-
-    public class StringAggIterator implements DbIterator
-    {
-        StringAggregator stringAgg;
-        TupleDesc td;
-        Iterator<HashMap.Entry<Field, Integer>> it;
-
-        public StringAggIterator(StringAggregator sAgg) {
-            stringAgg = sAgg;
-            td = stringAgg.gbfield == NO_GROUPING ? new TupleDesc(new Type[]{Type.INT_TYPE}) : new TupleDesc(new Type[]{stringAgg.gbfieldtype, Type.INT_TYPE});
-            it = stringAgg.groupValCount.entrySet().iterator();
-        }
-
-
-        @Override
-        public void open() throws DbException, TransactionAbortedException {
-            it = stringAgg.groupValCount.entrySet().iterator();
-        }
-
-        @Override
-        public boolean hasNext() throws DbException, TransactionAbortedException {
-           return it.hasNext();
-        }
-
-        @Override
-        public Tuple next() throws DbException, TransactionAbortedException, NoSuchElementException {
-            return null;
-        }
-
-        @Override
-        public void rewind() throws DbException, TransactionAbortedException {
-            it = stringAgg.groupValCount.entrySet().iterator();
-        }
-
-        @Override
-        public TupleDesc getTupleDesc() {
-            return td;
-        }
-
-        @Override
-        public void close() {
-
-        }
+        // some code goes here
+    	ArrayList<Tuple> tuples = new ArrayList<Tuple>();
+    	TupleDesc tupledesc = createGroupByTupleDesc();
+    	Tuple addMe;
+    	for (Field group : m_count.keySet())
+    	{
+    		int aggregateVal = m_count.get(group);
+    		addMe = new Tuple(tupledesc);
+    		if (gfi == Aggregator.NO_GROUPING){
+    			addMe.setField(0, new IntField(aggregateVal));
+    		}
+    		else {
+        		addMe.setField(0, group);
+        		addMe.setField(1, new IntField(aggregateVal));    			
+    		}
+    		tuples.add(addMe);
+    	}
+    	return new TupleIterator(tupledesc, tuples);
     }
 
 }

@@ -1,9 +1,7 @@
 package simpledb;
 
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.NoSuchElementException;
 
 /**
  * Knows how to compute some aggregate over a set of IntFields.
@@ -11,14 +9,15 @@ import java.util.NoSuchElementException;
 public class IntegerAggregator implements Aggregator {
 
     private static final long serialVersionUID = 1L;
-    
-    int grpFieldByIndex;
-    Type grpFieldType;
-    int aggFieldByIndex;
-    Op aggOp;
-    Map<Field, Integer> aggMap;
-    Map<Field, Integer> countMap;
 
+    private int m_groupByFieldIndex;
+    private Type m_groupByFieldType;
+    private int m_aggregateFieldIndex;
+    private Op m_op;
+    private HashMap<Field,Integer> m_aggregateData;
+    private HashMap<Field,Integer> m_count;
+    
+    
     /**
      * Aggregate constructor
      * 
@@ -33,17 +32,28 @@ public class IntegerAggregator implements Aggregator {
      * @param what
      *            the aggregation operator
      */
+
     public IntegerAggregator(int gbfield, Type gbfieldtype, int afield, Op what) {
         // some code goes here
-        this.grpFieldByIndex = gbfield;
-        this.grpFieldType = gbfieldtype;
-        this.aggFieldByIndex = afield;
-        this.aggOp = what;
-        this.aggMap = new HashMap<Field, Integer>();
-        this.countMap = new HashMap<Field, Integer>();
-
+    	m_groupByFieldIndex = gbfield;
+    	m_groupByFieldType = gbfieldtype;
+    	m_aggregateFieldIndex = afield;
+    	m_op = what;
+    	m_aggregateData = new HashMap<Field, Integer>();
+    	m_count = new HashMap<Field, Integer>();
     }
 
+    private int initialData()
+    {
+    	switch(m_op)
+    	{
+	    	case MIN: return Integer.MAX_VALUE;
+	    	case MAX: return Integer.MIN_VALUE;
+	    	case SUM: case COUNT: case AVG: return 0;
+	    	default: return 0; // shouldn't reach here
+    	}
+    }
+    
     /**
      * Merge a new tuple into the aggregate, grouping as indicated in the
      * constructor
@@ -53,32 +63,59 @@ public class IntegerAggregator implements Aggregator {
      */
     public void mergeTupleIntoGroup(Tuple tup) {
         // some code goes here
-        Field grpField = grpFieldByIndex == Aggregator.NO_GROUPING ? null : tup.getField(grpFieldByIndex);
-        int aggField = ((IntField) tup.getField(aggFieldByIndex)).getValue();
-        int count = countMap.getOrDefault(grpField, 0);
-        int agg = aggMap.getOrDefault(grpField, 0);
-        switch (aggOp) {
-            case MIN:
-                agg = count == 0 ? aggField : Math.min(agg, aggField);
-                break;
-            case MAX:
-                agg = count == 0 ? aggField : Math.max(agg, aggField);
-                break;
-            case SUM:
-            case AVG:
-                agg += aggField;
-                break;
-            case COUNT:
-                agg = count + 1;
-                break;
-            case SC_AVG:
-                agg += aggField;
-                break;
-        }
-        aggMap.put(grpField, agg);
-        countMap.put(grpField, count + 1);
+    	Field tupleGroupByField = (m_groupByFieldIndex == Aggregator.NO_GROUPING) ? null : tup.getField(m_groupByFieldIndex);
+    	
+    	if (!m_aggregateData.containsKey(tupleGroupByField))
+    	{
+    		m_aggregateData.put(tupleGroupByField, initialData());
+    		m_count.put(tupleGroupByField, 0);
+    	}
+    	
+    	int tupleValue = ((IntField) tup.getField(m_aggregateFieldIndex)).getValue();
+    	int currentValue = m_aggregateData.get(tupleGroupByField);
+    	int currentCount = m_count.get(tupleGroupByField);
+    	int newValue = currentValue;
+    	switch(m_op)
+    	{
+    		case MIN: 
+    			newValue = (tupleValue > currentValue) ? currentValue : tupleValue;
+    			break;
+    		case MAX:
+    			newValue = (tupleValue < currentValue) ? currentValue : tupleValue;
+    			break;
+    		case SUM: case AVG:
+    			// can't calculate average until all the tuples are in
+    			// In the mean time, keep track of sum and count and 
+    			// calculate the averages in the iterator
+    			m_count.put(tupleGroupByField, currentCount+1);
+    			newValue = tupleValue + currentValue;
+    			break;
+    		case COUNT:
+    			newValue = currentValue + 1;
+    			break;
+			default:
+				break;
+    	}
+    	m_aggregateData.put(tupleGroupByField, newValue);
     }
 
+    private TupleDesc createGroupByTupleDesc()
+    {
+    	String[] names;
+    	Type[] types;
+    	if (m_groupByFieldIndex == Aggregator.NO_GROUPING)
+    	{
+    		names = new String[] {"aggregateValue"};
+    		types = new Type[] {Type.INT_TYPE};
+    	}
+    	else
+    	{
+    		names = new String[] {"groupValue", "aggregateValue"};
+    		types = new Type[] {m_groupByFieldType, Type.INT_TYPE};
+    	}
+    	return new TupleDesc(types, names);
+    }
+    
     /**
      * Create a DbIterator over group aggregate results.
      * 
@@ -87,59 +124,33 @@ public class IntegerAggregator implements Aggregator {
      *         aggregateVal is determined by the type of aggregate specified in
      *         the constructor.
      */
-
-    public DbIterator iterator()
-    {
-        return new IntegerAggregatorIterator(this);
-    }
-
-    public class IntegerAggregatorIterator implements DbIterator {
-
-        IntegerAggregator agg;
-        TupleDesc td;
-        Iterator<HashMap.Entry<Field, Integer>> iter;
-
-        public IntegerAggregatorIterator(IntegerAggregator agg) {
-            this.agg = agg;
-            this.td = td;
-            this.iter = agg.aggMap.entrySet().iterator();
-        }
-
-        public IntegerAggregator getAgg() {
-            return agg;
-        }
-
-
-        @Override
-        public void open() throws DbException, TransactionAbortedException {
-            iter = agg.aggMap.entrySet().iterator();
-        }
-
-        @Override
-        public boolean hasNext() throws DbException, TransactionAbortedException {
-            return iter.hasNext();
-        }
-
-        @Override
-        public Tuple next() throws DbException, TransactionAbortedException, NoSuchElementException {
-            return null;
-        }
-
-        @Override
-        public void rewind() throws DbException, TransactionAbortedException {
-            iter = agg.aggMap.entrySet().iterator();
-        }
-
-        @Override
-        public TupleDesc getTupleDesc() {
-            return this.td;
-        }
-
-        @Override
-        public void close() {
-            agg = null;
-            close();
-        }
+    public DbIterator iterator() {
+        // some code goes here
+    	ArrayList<Tuple> tuples = new ArrayList<Tuple>();
+    	TupleDesc tupledesc = createGroupByTupleDesc();
+    	Tuple addMe;
+    	for (Field group : m_aggregateData.keySet())
+    	{
+    		int aggregateVal;
+    		if (m_op == Op.AVG)
+    		{
+    			aggregateVal = m_aggregateData.get(group) / m_count.get(group);
+    		}
+    		else
+    		{
+    			aggregateVal = m_aggregateData.get(group);
+    		}
+    		addMe = new Tuple(tupledesc);
+    		if (m_groupByFieldIndex == Aggregator.NO_GROUPING){
+    			addMe.setField(0, new IntField(aggregateVal));
+    		}
+    		else {
+        		addMe.setField(0, group);
+        		addMe.setField(1, new IntField(aggregateVal));    			
+    		}
+    		tuples.add(addMe);
+    	}
+    	return new TupleIterator(tupledesc, tuples);
     }
 
 }
