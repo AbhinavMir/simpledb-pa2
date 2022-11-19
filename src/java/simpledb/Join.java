@@ -65,6 +65,7 @@ public class Join extends Operator {
     public void open() throws DbException, NoSuchElementException,
             TransactionAbortedException {
         child1.open();
+        child2.open();
     }
 
     public void close() {
