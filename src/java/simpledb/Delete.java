@@ -8,7 +8,11 @@ import java.io.IOException;
  */
 public class Delete extends Operator {
 
-    private static final long serialVersionUID = 1L;
+    static final long serialVersionUID = 1L;
+    TransactionId transactionId;
+    DbIterator it;
+    TupleDesc resultTupleDesc;
+    boolean deleted;
 
     /**
      * Constructor specifying the transaction that this delete belongs to as
@@ -20,24 +24,33 @@ public class Delete extends Operator {
      *            The child operator from which to read tuples for deletion
      */
     public Delete(TransactionId t, DbIterator child) {
-        // some code goes here
+        this.transactionId = t;
+        this.it = child;
+        this.resultTupleDesc = new TupleDesc(new Type[] { Type.INT_TYPE });
+        this.deleted = false;
+
+        String[] deletedNames = new String[] { "Deleted" };
+        Type[] deletedTypes = new Type[] { Type.INT_TYPE };
+        this.resultTupleDesc = new TupleDesc(deletedTypes, deletedNames);
     }
 
     public TupleDesc getTupleDesc() {
-        // some code goes here
-        return null;
+        return this.resultTupleDesc;
     }
 
     public void open() throws DbException, TransactionAbortedException {
-        // some code goes here
+        super.open();
+        this.it.open();
+        deleted = false;
     }
 
     public void close() {
-        // some code goes here
+        super.close();
+        this.it.close();
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
-        // some code goes here
+        this.it.rewind();
     }
 
     /**
@@ -50,19 +63,36 @@ public class Delete extends Operator {
      * @see BufferPool#deleteTuple
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
-        // some code goes here
-        return null;
+    
+        if (deleted) return null;
+        int deletedCount = 0;
+        while (it.hasNext()) {
+            Tuple tup = it.next();
+            try {
+                Database.getBufferPool().deleteTuple(transactionId, tup);
+            } catch (IOException e) {
+                throw new DbException("IO Exception on tuple deletion");
+            }
+            deletedCount++;
+        }
+
+        Tuple resultTuple = new Tuple(resultTupleDesc);
+        resultTuple.setField(0, new IntField(deletedCount));
+        deleted = true;
+        return resultTuple;
+
     }
 
     @Override
     public DbIterator[] getChildren() {
         // some code goes here
-        return null;
+        return new DbIterator[] { this.it };
     }
 
     @Override
     public void setChildren(DbIterator[] children) {
-        // some code goes here
+        // some code goes her
+        it = children[0];
     }
 
 }
